@@ -7,9 +7,10 @@ import pandas as pd
 import numpy as np
 from flask import Flask, request, jsonify
 from xgboost import XGBClassifier
-import pathlib
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 # For local deployment
 model_path = os.path.join(os.path.dirname(__file__), 'new_xg_model.joblib')
@@ -152,7 +153,7 @@ def xg_predict():
 
 if __name__ == "__main__": 
 
-    app.run()
+    app.run(host='0.0.0.0', port=8001, debug=True)
 
     # answer = pre_process_data('http://9779.info/%E5%84%BF%E7%AB%A5%E7%AB%8B%E4%BD%93%E7%BA%B8%E8%B4%B4%E7%94%BB/')
 
