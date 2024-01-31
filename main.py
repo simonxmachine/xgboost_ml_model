@@ -153,7 +153,7 @@ def xg_predict():
 
 if __name__ == "__main__": 
 
-    app.run(host='0.0.0.0', port=8001, debug=True)
+    app.run(host='0.0.0.0', port=8001, debug=False)
 
     # answer = pre_process_data('http://9779.info/%E5%84%BF%E7%AB%A5%E7%AB%8B%E4%BD%93%E7%BA%B8%E8%B4%B4%E7%94%BB/')
 

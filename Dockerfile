@@ -8,6 +8,6 @@ COPY ./requirements.txt /app/requirements.txt
  
 RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
  
-# CMD ["gunicorn", "-b", "0.0.0.0:8001" ,"main:main"]
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8001" , "main:app"]
 
-CMD ["python", "main.py", "--host=0.0.0.0"]
+# CMD ["python", "main.py", "--host=0.0.0.0"]
