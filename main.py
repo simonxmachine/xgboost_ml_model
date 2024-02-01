@@ -8,9 +8,19 @@ import numpy as np
 from flask import Flask, request, jsonify
 from xgboost import XGBClassifier
 from flask_cors import CORS
+import tensorflow as tf
+from tensorflow import keras
+from keras.models import Model
+from keras.layers import Dense
+import json
 
 app = Flask(__name__)
+
 CORS(app)
+
+
+#Load TF model
+tf_model = tf.keras.models.load_model("./url_tf_model")
 
 # For local deployment
 model_path = os.path.join(os.path.dirname(__file__), 'new_xg_model.joblib')
@@ -18,13 +28,6 @@ model = joblib.load(model_path)
 letter_path = os.path.join(os.path.dirname(__file__), 'letter_scaler.pkl')
 digit_path = os.path.join(os.path.dirname(__file__), 'digit_scaler.pkl')
 character_path = os.path.join(os.path.dirname(__file__), 'special_char_scaler.pkl')
-
-# model_path = pathlib.Path(process.cwd(), 'new_xg_model.joblib')
-# model = joblib.load(model_path)
-
-# letter_path = pathlib.Path(process.cwd(), 'letter_scaler.pkl')
-# digit_path = pathlib.Path(process.cwd(), 'digit_scaler.pkl')
-# character_path = pathlib.Path(process.cwd(), 'special_char_scaler.pkl')
 
 
 with open(letter_path, 'rb') as a:
@@ -123,6 +126,17 @@ predictions_map = {
 }
 
 
+def ensure_json_serializable(obj):
+    if isinstance(obj, (float, int)):
+        return float(obj)  # Convert floats to regular floats
+    elif isinstance(obj, dict):
+        return {key: ensure_json_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [ensure_json_serializable(item) for item in obj]
+    else:
+        return obj
+
+
 @app.route('/')
 def home():
     return 'Hello, World!'
@@ -135,28 +149,105 @@ def xg_predict():
 
     processed_string = pre_process_data(string_input)
 
-    predictions = model.predict(processed_string)
-
-    value = predictions_map[predictions[0]]
-
-    predictions_proba = model.predict_proba(processed_string)
-    rounded_predictions = np.around(predictions_proba, decimals=4)
-    np.set_printoptions(suppress=True)
-
     keys = ["Benign", "Defacement", "Phishing", "Malware"]
 
-    # Convert the array to a dictionary with keys
-    result = dict(zip(keys, rounded_predictions.flatten()))
+    #XG Predictions
+    predictions = model.predict(processed_string)
+    value = predictions_map[predictions[0]]
+    xg_value = "XG - " + value
+    predictions_proba = model.predict_proba(processed_string)
+    rounded_predictions = np.around(predictions_proba, decimals=3)
 
-    return (f"{value}: {str(result)}")
+
+    #TF Predictions
+    keys_2 = [0, 1, 2, 3]
+    tf_prediction = tf_model.predict(processed_string)
+    tf_proba = np.around(tf_prediction, decimals=3)
+    tf_proba_dict = dict(zip(keys_2, tf_proba[0]))
+
+    tf_value = max(tf_proba_dict, key=lambda x: tf_proba_dict[x]) 
+    tf_type = "TF - " + predictions_map[tf_value]
+
+    np.set_printoptions(suppress=True)
+
+
+    # Convert the array to a dictionary with keys
+    # result = dict(zip(keys, rounded_predictions.flatten()))
+    # tf_result = dict(zip(keys, tf_proba.flatten()))
+
+    result = dict(zip(keys, rounded_predictions.flatten().astype(float)))  # Convert to regular floats
+    tf_result = dict(zip(keys, tf_proba.flatten().astype(float)))
+
+
+    data = {
+        xg_value: result,
+        tf_type: tf_result,
+    }
+
+    # Use json.dumps to convert the dictionary to JSON with indentation
+    json_string = json.dumps(data, indent=4)
+
+    # return (f"{value}: {str(result)} \n {tf_type}: {str(tf_result)}")
+    return json_string
 
 
 if __name__ == "__main__": 
 
     app.run(host='0.0.0.0', port=8001, debug=False)
 
-    # answer = pre_process_data('http://9779.info/%E5%84%BF%E7%AB%A5%E7%AB%8B%E4%BD%93%E7%BA%B8%E8%B4%B4%E7%94%BB/')
+    # processed_string = pre_process_data("http://www.wu8188.com/cl/tpl/five-star/ver1/css/five-star.css?v=ver15.32")
 
+    # keys = ["Benign", "Defacement", "Phishing", "Malware"]
+    # predictions = model.predict(processed_string)
+    # predictions_proba = model.predict_proba(processed_string)
+    # value = predictions_map[predictions[0]]
+    # rounded_predictions = np.around(predictions_proba, decimals=3)
+
+    # #TF Predictions
+    # keys_2 = [0, 1, 2, 3]
+    # tf_prediction = tf_model.predict(processed_string)
+    # tf_proba = np.around(tf_prediction, decimals=3)
+    # tf_proba_dict = dict(zip(keys_2, tf_proba[0]))
+
+    # tf_value = max(tf_proba_dict, key=lambda x: tf_proba_dict[x]) 
+    # tf_type = predictions_map[tf_value]
+
+    # np.set_printoptions(suppress=True)
+
+
+    # # Convert the array to a dictionary with keys
+    # # result = dict(zip(keys, rounded_predictions.flatten()))
+    # # tf_result = dict(zip(keys, tf_proba.flatten()))
+
+    # result = dict(zip(keys, rounded_predictions.flatten().astype(float)))  # Convert to regular floats
+    # tf_result = dict(zip(keys, tf_proba.flatten().astype(float)))
+
+    # data = {
+    #     value: result,
+    #     tf_type: tf_result,
+    # }
+
+    # # Use json.dumps to convert the dictionary to JSON with indentation
+    # json_string = json.dumps(data, indent=4)
+
+    # print("xg proba", predictions_proba)
+    # print("tf proba dict", tf_proba_dict)
+    # print("xg value", value)
+    # print("tf type", tf_type)
+    # print(json_string)
+
+
+    # print("tf proba", tf_proba)
+    # print("tf proba dict", tf_proba_dict)
+    # print("tf value", tf_value)
+    # print("tf type", tf_type)
+    # print(json_string)
+
+    # Convert the array to a dictionary with keys
+
+
+    # answer = pre_process_data('http://9779.info/%E5%84%BF%E7%AB%A5%E7%AB%8B%E4%BD%93%E7%BA%B8%E8%B4%B4%E7%94%BB/')
+    # print(answer)
     # predictions = model.predict(answer)
 
     # value = predictions[0]
