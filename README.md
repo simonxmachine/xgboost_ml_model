@@ -11,8 +11,9 @@ For loading into AWS Fargate and API Gateway
 
 *** 
 
-Need use Python version 10.4 to use tensorflow
+Need use Python version 3.10 to use tensorflow. 
 
 To set up virtual environment: python3.10 -m venv env
 
+If having issue with Tensorflow install:
 pip3 install --no-cache-dir  --force-reinstall -Iv tensorflow
