@@ -6,6 +6,7 @@ For loading into AWS Fargate and API Gateway
 4) Connect AWS API Gateway to task public URL
 5) Configure CORS in API Gateway to allow * for origin, and include methods Option, Post, Head, *
 6) Add routes to the extension /xg_predict
+7) Ensure the proper domain URI is assigned to the correct request type
 
 
 
